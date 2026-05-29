@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using StockAPI.Services.Interfaces;
 
 namespace StockAPI.Controllers
 {
@@ -6,37 +7,39 @@ namespace StockAPI.Controllers
     [Route("api/[controller]")]
     public class ProductsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IProductService _productService;
 
-        public ProductsController(AppDbContext context)
+        public ProductsController(IProductService productService)
         {
-            _context = context;
+            _productService = productService;
         }
 
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            return Ok(_context.Products.ToList());
+            var products = await _productService.GetAllAsync();
+            return Ok(products);
         }
 
-        [HttpPost]
-        public IActionResult Create(Product product)
-        {
-            _context.Products.Add(product);
-            _context.SaveChanges();
-            return Ok(product);
-        }
+        // [HttpPost]
+        // public async Task<IActionResult> Create(
+        //     string name,
+        //     decimal price,
+        //     int qty)
+        // {
+        //     var product = await _productService.CreateAsync(name, price, qty);
+        //     return Ok(product);
+        // }
 
         [HttpPost("{id}/add-stock")]
-        public IActionResult AddStock(int id, int amount)
+        public async Task<IActionResult> AddStock(int id, int amount)
         {
-            var product = _context.Products.Find(id);
-            if (product == null) return NotFound();
+            var result = await _productService.AddStockAsync(id, amount);
 
-            product.Stock += amount;
-            _context.SaveChanges();
+            if (result == null)
+                return NotFound();
 
-            return Ok(product);
+            return Ok("Stock updated");
         }
     }
 }
