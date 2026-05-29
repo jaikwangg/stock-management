@@ -5,6 +5,8 @@ namespace StockAPI.Services.Interfaces
         Task<List<Product>> GetAllAsync();
         Task<Product?> GetByIdAsync(int id);
         Task<Product> CreateAsync(Product product);
+        Task<Product?> UpdateAsync(int id, Product product);
         Task<Product?> AddStockAsync(int id, int amount);
+        Task<bool> DeleteAsync(int id);
     }
 }

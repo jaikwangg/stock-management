@@ -40,6 +40,29 @@ namespace StockAPI.Services.Implementations
             return (await GetByIdAsync(product.Id))!;
         }
 
+        public async Task<Product?> UpdateAsync(int id, Product updatedProduct)
+        {
+            var product = await _context.Products
+                .Include(p => p.Stock)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+                return null;
+
+            product.Name = updatedProduct.Name;
+            product.Price = updatedProduct.Price;
+
+            product.Stock ??= new Stock
+            {
+                ProductId = product.Id,
+                Quantity = 0
+            };
+            product.Stock.Quantity = Math.Max(0, updatedProduct.Stock?.Quantity ?? 0);
+
+            await _context.SaveChangesAsync();
+            return await GetByIdAsync(id);
+        }
+
         public async Task<Product?> AddStockAsync(int id, int amount)
         {
             var product = await _context.Products
@@ -63,6 +86,26 @@ namespace StockAPI.Services.Implementations
             await _context.SaveChangesAsync();
 
             return await GetByIdAsync(id);
+        }
+
+        public async Task<bool> DeleteAsync(int id)
+        {
+            var product = await _context.Products
+                .Include(p => p.Stock)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (product == null)
+                return false;
+
+            var cartItems = await _context.CartItems
+                .Where(i => i.ProductId == id)
+                .ToListAsync();
+
+            _context.CartItems.RemoveRange(cartItems);
+            _context.Products.Remove(product);
+            await _context.SaveChangesAsync();
+
+            return true;
         }
     }
 }

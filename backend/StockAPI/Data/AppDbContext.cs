@@ -24,6 +24,13 @@ public class AppDbContext : DbContext
             .HasPrecision(18, 2);
 
         modelBuilder.Entity<Cart>()
+            .Property(c => c.SessionId)
+            .HasMaxLength(64);
+
+        modelBuilder.Entity<Cart>()
+            .HasIndex(c => c.SessionId);
+
+        modelBuilder.Entity<Cart>()
             .HasMany(c => c.Items)
             .WithOne(i => i.Cart)
             .HasForeignKey(i => i.CartId)

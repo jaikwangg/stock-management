@@ -12,10 +12,11 @@ builder.Services.AddScoped<StockAPI.Services.Interfaces.ICartService, StockAPI.S
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowAll",
-        policy => policy.AllowAnyOrigin()
+    options.AddPolicy("AllowFrontend",
+        policy => policy.WithOrigins("http://localhost:3000")
                         .AllowAnyMethod()
-                        .AllowAnyHeader());
+                        .AllowAnyHeader()
+                        .AllowCredentials());
 });
 
 builder.Services.AddControllers();
@@ -26,16 +27,17 @@ using (var scope = app.Services.CreateScope())
 {
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.EnsureCreated();
+    EnsureCartSessionColumn(context);
 
-    if (!context.Products.Any())
-    {
-        context.Products.AddRange(
-            new Product { Name = "Keyboard", Price = 49.99m, Stock = new Stock { Quantity = 12 } },
-            new Product { Name = "Mouse", Price = 24.99m, Stock = new Stock { Quantity = 18 } },
-            new Product { Name = "Monitor", Price = 199.99m, Stock = new Stock { Quantity = 6 } });
+    // if (!context.Products.Any())
+    // {
+    //     context.Products.AddRange(
+    //         new Product { Name = "Keyboard", Price = 49.99m, Stock = new Stock { Quantity = 12 } },
+    //         new Product { Name = "Mouse", Price = 24.99m, Stock = new Stock { Quantity = 18 } },
+    //         new Product { Name = "Monitor", Price = 199.99m, Stock = new Stock { Quantity = 6 } });
 
-        context.SaveChanges();
-    }
+    //     context.SaveChanges();
+    // }
 }
 
 // Configure the HTTP request pipeline.
@@ -46,8 +48,37 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("AllowAll");
+app.UseCors("AllowFrontend");
 
 app.MapControllers();
 
 app.Run();
+
+//add the SessionId column to the Carts table without losing existing data.
+static void EnsureCartSessionColumn(AppDbContext context)
+{
+    var connection = context.Database.GetDbConnection();
+    connection.Open();
+
+    using (var command = connection.CreateCommand())
+    {
+        command.CommandText = "PRAGMA table_info('Carts')";
+        using var reader = command.ExecuteReader();
+        var hasSessionId = false;
+
+        while (reader.Read())
+        {
+            if (string.Equals(reader.GetString(1), "SessionId", StringComparison.OrdinalIgnoreCase))
+            {
+                hasSessionId = true;
+                break;
+            }
+        }
+
+        if (hasSessionId)
+            return;
+    }
+
+    context.Database.ExecuteSqlRaw("ALTER TABLE Carts ADD COLUMN SessionId TEXT NOT NULL DEFAULT ''");
+    context.Database.ExecuteSqlRaw("CREATE INDEX IF NOT EXISTS IX_Carts_SessionId ON Carts(SessionId)");
+}
