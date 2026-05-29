@@ -2,88 +2,95 @@
 
 import { useState, useEffect } from "react";
 import { Product, CartItem } from "./types";
-import { getProducts, createProduct, addStock } from "./api";
+import { getProducts, createProduct, addStock, createCart, addCartItem, removeCartItem } from "./api";
 
 export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartId, setCartId] = useState<number | null>(null);
   const [newProduct, setNewProduct] = useState({ name: "", price: 0, stock: 0 });
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  const [error, setError] = useState<string | null>(null);
 
   const fetchProducts = async () => {
     try {
+      setError(null);
       const data = await getProducts();
       setProducts(data);
     } catch (error) {
       console.error(error);
+      setError(error instanceof Error ? error.message : "Failed to connect to API");
     } finally {
       setLoading(false);
     }
   };
 
+  useEffect(() => {
+    const t = setTimeout(() => {
+      fetchProducts();
+      createCart()
+        .then((createdCart) => {
+          setCartId(createdCart.id);
+          setCart(createdCart.items);
+        })
+        .catch((error) => {
+          console.error(error);
+          setError(error instanceof Error ? error.message : "Failed to create cart");
+        });
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
   const handleCreateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      setError(null);
       await createProduct(newProduct);
       setNewProduct({ name: "", price: 0, stock: 0 });
       fetchProducts();
     } catch (error) {
       console.error(error);
+      setError(error instanceof Error ? error.message : "Failed to create product");
     }
   };
 
   const handleAddStock = async (id: number) => {
     try {
-      await addStock(id, 10);
+      setError(null);
+      await addStock(id, 1);
       fetchProducts();
     } catch (error) {
       console.error(error);
+      setError(error instanceof Error ? error.message : "Failed to add stock");
     }
   };
 
-  const addToCart = (product: Product) => {
-    if (product.stock <= 0) return;
+  const addToCart = async (product: Product) => {
+    if (product.stock <= 0 || cartId === null) return;
 
-    setCart((prevCart) => {
-      const existing = prevCart.find((item) => item.productId === product.id);
-      if (existing) {
-        return prevCart.map((item) =>
-          item.productId === product.id
-            ? { ...item, quantity: item.quantity + 1 }
-            : item
-        );
-      }
-      return [
-        ...prevCart,
-        {
-          productId: product.id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-        },
-      ];
-    });
-
-    // Optimistically update stock in UI (optional, but good for UX)
-    setProducts((prev) =>
-      prev.map((p) => (p.id === product.id ? { ...p, stock: p.stock - 1 } : p))
-    );
+    try {
+      setError(null);
+      const updatedCart = await addCartItem(cartId, product.id, 1);
+      setCart(updatedCart.items);
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
+      setError(error instanceof Error ? error.message : "Failed to add item to cart");
+    }
   };
 
-  const removeFromCart = (productId: number) => {
-    const item = cart.find((i) => i.productId === productId);
-    if (!item) return;
+  const removeFromCart = async (productId: number) => {
+    if (cartId === null) return;
 
-    setCart((prev) => prev.filter((i) => i.productId !== productId));
-    
-    // Restore stock in UI
-    setProducts((prev) =>
-      prev.map((p) => (p.id === productId ? { ...p, stock: p.stock + item.quantity } : p))
-    );
+    try {
+      setError(null);
+      const updatedCart = await removeCartItem(cartId, productId);
+      setCart(updatedCart.items);
+      fetchProducts();
+    } catch (error) {
+      console.error(error);
+      setError(error instanceof Error ? error.message : "Failed to remove item from cart");
+    }
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -92,11 +99,10 @@ export default function Home() {
     <div className="min-h-screen bg-gray-50 p-8 text-gray-900">
       <header className="mb-12 text-center">
         <h1 className="text-4xl font-bold text-blue-600">Stock Management System</h1>
-        <p className="text-gray-600 mt-2">Manage your products and shopping cart with ease</p>
+        {error && <p className="mt-4 text-sm font-medium text-red-600">{error}</p>}
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Product Form Section */}
         <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-xl font-semibold mb-4">Add New Product</h2>
           <form onSubmit={handleCreateProduct} className="space-y-4">
@@ -144,7 +150,6 @@ export default function Home() {
           </form>
         </section>
 
-        {/* Product List Section */}
         <section className="lg:col-span-1 space-y-4">
           <h2 className="text-xl font-semibold mb-4">Product Catalog</h2>
           {loading ? (
@@ -160,15 +165,13 @@ export default function Home() {
                 >
                   <div>
                     <h3 className="font-bold text-lg">{product.name}</h3>
-                    <p className="text-sm text-gray-600">Price: ${product.price.toFixed(2)}</p>
-                    <p className={`text-sm ${product.stock <= 5 ? "text-red-500 font-medium" : "text-gray-500"}`}>
-                      Stock: {product.stock}
-                    </p>
+                    <p className="text-sm text-gray-600">Price: {product.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-600">Stock: {product.stock}</p>
                     <button
                       onClick={() => handleAddStock(product.id)}
                       className="text-xs text-blue-500 hover:underline mt-1 block"
                     >
-                      + Add 10 Stock
+                      + Add 1 Stock
                     </button>
                   </div>
                   <button
@@ -188,7 +191,6 @@ export default function Home() {
           )}
         </section>
 
-        {/* Cart Section */}
         <section className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 h-fit sticky top-8">
           <h2 className="text-xl font-semibold mb-4 flex justify-between items-center">
             Shopping Cart
@@ -208,11 +210,11 @@ export default function Home() {
                     <div>
                       <p className="font-medium">{item.name}</p>
                       <p className="text-xs text-gray-500">
-                        ${item.price.toFixed(2)} x {item.quantity}
+                        {item.price.toFixed(2)} x {item.quantity}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">${(item.price * item.quantity).toFixed(2)}</p>
+                      <p className="font-semibold">{(item.price * item.quantity).toFixed(2)}</p>
                       <button
                         onClick={() => removeFromCart(item.productId)}
                         className="text-xs text-red-500 hover:underline"
