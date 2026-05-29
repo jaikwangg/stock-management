@@ -28,16 +28,6 @@ using (var scope = app.Services.CreateScope())
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     context.Database.EnsureCreated();
     EnsureCartSessionColumn(context);
-
-    // if (!context.Products.Any())
-    // {
-    //     context.Products.AddRange(
-    //         new Product { Name = "Keyboard", Price = 49.99m, Stock = new Stock { Quantity = 12 } },
-    //         new Product { Name = "Mouse", Price = 24.99m, Stock = new Stock { Quantity = 18 } },
-    //         new Product { Name = "Monitor", Price = 199.99m, Stock = new Stock { Quantity = 6 } });
-
-    //     context.SaveChanges();
-    // }
 }
 
 // Configure the HTTP request pipeline.
@@ -54,7 +44,7 @@ app.MapControllers();
 
 app.Run();
 
-//add the SessionId column to the Carts table without losing existing data.
+//add the sessionId column to carts table and keep existing data
 static void EnsureCartSessionColumn(AppDbContext context)
 {
     var connection = context.Database.GetDbConnection();

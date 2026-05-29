@@ -88,3 +88,11 @@ export async function clearCart(): Promise<Cart> {
   });
   return parseResponse<Cart>(response, "Failed to clear cart");
 }
+
+export async function checkoutCart(): Promise<Cart> {
+  const response = await fetch(`${API_BASE_URL}/cart/checkout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  return parseResponse<Cart>(response, "Failed to checkout");
+}

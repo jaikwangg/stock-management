@@ -129,6 +129,18 @@ namespace StockAPI.Services.Implementations
             return await ClearCartAsync(cart);
         }
 
+        public async Task<string> CheckoutBySessionIdAsync(string sessionId)
+        {
+            var cart = await GetWritableCartBySessionIdAsync(sessionId);
+            if (cart == null)
+                return "Cart not found";
+
+            cart.Items.Clear();
+            await _context.SaveChangesAsync();
+
+            return "OK";
+        }
+
         private async Task<Cart?> GetCartBySessionIdAsync(string sessionId)
         {
             return await _context.Carts

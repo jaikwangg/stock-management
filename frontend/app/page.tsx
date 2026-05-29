@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   addCartItem,
+  checkoutCart,
   clearCart,
   createProduct,
   deleteProduct,
@@ -163,6 +164,16 @@ export default function Home() {
     }
   };
 
+  const handleCheckout = async () => {
+    try {
+      setError(null);
+      const updatedCart = await checkoutCart();
+      await refreshProductsAfterCartChange(updatedCart);
+    } catch (error) {
+      showError(error, "Failed to checkout");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 p-8 text-gray-900">
       <header className="mb-12 text-center">
@@ -171,7 +182,7 @@ export default function Home() {
       </header>
 
       <main className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <ProductForm product={newProduct} onProductChange={setNewProduct} onSubmit={handleCreateProduct} />
+        {/* <ProductForm product={newProduct} onProductChange={setNewProduct} onSubmit={handleCreateProduct} /> */}
 
         <ProductCatalog
           products={products}
@@ -192,6 +203,7 @@ export default function Home() {
           onDecreaseItem={handleDecreaseCartItem}
           onRemoveItem={handleRemoveCartItem}
           onClearCart={handleClearCart}
+          onCheckout={handleCheckout}
         />
       </main>
     </div>

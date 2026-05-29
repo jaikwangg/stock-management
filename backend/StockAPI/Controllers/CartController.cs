@@ -158,6 +158,20 @@ namespace StockAPI.Controllers
             return Ok(await ToDto(cart));
         }
 
+        [HttpPost("checkout")]
+        public async Task<IActionResult> Checkout()
+        {
+            var sessionId = GetOrCreateGuestSessionId();
+            await _cartService.GetOrCreateCartBySessionIdAsync(sessionId);
+
+            var result = await _cartService.CheckoutBySessionIdAsync(sessionId);
+            if (result == "Cart not found")
+                return NotFound(result);
+
+            var cart = await _cartService.GetOrCreateCartBySessionIdAsync(sessionId);
+            return Ok(await ToDto(cart));
+        }
+
         private string GetOrCreateGuestSessionId()
         {
             if (Request.Cookies.TryGetValue(GuestSessionCookieName, out var sessionId) &&

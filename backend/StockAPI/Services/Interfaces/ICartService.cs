@@ -13,5 +13,6 @@ namespace StockAPI.Services.Interfaces
         Task<string> RemoveFromCartBySessionIdAsync(string sessionId, int productId);
         Task<string> ClearCartAsync(int cartId);
         Task<string> ClearCartBySessionIdAsync(string sessionId);
+        Task<string> CheckoutBySessionIdAsync(string sessionId);
     }
 }
