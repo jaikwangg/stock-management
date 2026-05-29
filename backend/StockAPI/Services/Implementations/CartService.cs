@@ -230,9 +230,21 @@ namespace StockAPI.Services.Implementations
 
         private async Task<string> ClearCartAsync(Cart cart)
         {
+            if (!cart.Items.Any()) return "OK";
+
+            var productIds = cart.Items.Select(i => i.ProductId).ToList();
+            var products = await _context.Products
+                .Include(p => p.Stock)
+                .Where(p => productIds.Contains(p.Id))
+                .ToListAsync();
+
             foreach (var item in cart.Items.ToList())
             {
-                await _productService.AddStockAsync(item.ProductId, item.Quantity);
+                var product = products.FirstOrDefault(p => p.Id == item.ProductId);
+                if (product != null && product.Stock != null)
+                {
+                    product.Stock.Quantity += item.Quantity;
+                }
                 cart.Items.Remove(item);
             }
 
