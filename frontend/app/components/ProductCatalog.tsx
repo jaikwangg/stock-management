@@ -99,7 +99,7 @@ export function ProductCatalog({
                     >
                       {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
                     </button>
-                    <button
+                    {/* <button
                       onClick={() => onStartEditing(product)}
                       className="px-4 py-2 rounded text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition"
                     >
@@ -110,7 +110,7 @@ export function ProductCatalog({
                       className="px-4 py-2 rounded text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition"
                     >
                       Delete
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               )}
